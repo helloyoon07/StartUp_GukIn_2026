@@ -1,1 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloom Farm</title>
+    <meta name="description" content="실패를 거름 삼아 나만의 작물을 키우는 앱">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+
+<body>
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="login-overlay">
+        <div class="login-card premium-glass">
+            <div class="login-logo">🌱</div>
+            <h1 class="login-title">Bloom Farm</h1>
+            <p class="login-sub">당신의 성장이 꽃피는 곳</p>
+
+            <div id="loginForm">
+                <div class="input-group">
+                    <input type="text" id="loginId" class="login-input" placeholder="아이디" maxlength="20"
+                        autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="loginPw" class="login-input" placeholder="비밀번호" maxlength="30">
+                </div>
+                <button class="btn btn-primary login-btn" onclick="doLogin()">로그인</button>
+                <p class="login-toggle">계정이 없으신가요? <a href="#" onclick="toggleAuthMode(event)">회원가입</a></p>
+            </div>
+
+            <div id="registerForm" style="display:none">
+                <div class="input-group">
+                    <input type="text" id="regId" class="login-input" placeholder="아이디 (3자 이상)" maxlength="20"
+                        autocomplete="username">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="regPw" class="login-input" placeholder="비밀번호 (4자 이상)" maxlength="30">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="regPw2" class="login-input" placeholder="비밀번호 확인" maxlength="30">
+                </div>
+                <button class="btn btn-primary login-btn" onclick="doRegister()">회원가입</button>
+                <p class="login-toggle">이미 계정이 있으신가요? <a href="#" onclick="toggleAuthMode(event)">로그인</a></p>
+            </div>
+
+            <div id="loginError" class="login-error"></div>
+        </div>
+    </div>
+
+    <!-- APP WRAPPER -->
+    <div id="appWrap" style="display:none">
+        <!-- TOP NAV -->
+        <nav class="premium-nav">
+            <div class="logo">
+                <span class="logo-icon">🌱</span>
+                <span class="logo-text">Bloom Farm</span>
+            </div>
+            <div class="nav-right">
+                <div class="nav-tabs">
+                    <button class="nav-tab active" onclick="goPage('home')">농장</button>
+                    <button class="nav-tab" onclick="goPage('tasks')">관리</button>
+                    <button class="nav-tab" onclick="goPage('log')">기록</button>
+                    <button class="nav-tab" onclick="goPage('growth')">성장</button>
+                </div>
+                <button class="user-badge" onclick="doLogout()" title="로그아웃">
+                    <span id="userIcon">🌾</span>
+                    <span id="userName" class="user-name"></span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- 1. HOME: FARM VISUALS -->
+        <div id="home" class="page active">
+            <div class="page-header flex-between">
+                <div>
+                    <h2>나의 농장 <span style="font-size:16px; font-weight:normal; opacity:0.7">오늘의 성장</span></h2>
+                    <div class="today-stats premium-glass">
+                        오늘 집중: <span id="todayTotal" class="highlight-text">0:00</span>
+                    </div>
+                </div>
+                <button class="share-btn" onclick="shareFarm()" title="농장 이미지 캡쳐 및 공유">📸 공유</button>
+            </div>
+
+            <div class="farm-stage premium-glass">
+                <div class="sky" id="skyEl">
+                    <div class="cloud c1"></div>
+                    <div class="cloud c2"></div>
+                    <div class="rain-drops" id="rainEl"></div>
+                </div>
+                <!-- Extended Stardew style farm ground -->
+                <div class="ground-area">
+                    <div class="farm-house" title="나의 오두막 (총 집중 시간 탑)">🏠</div>
+                    <div class="crop-field multi-field" id="cropField"></div>
+                    <div class="soil-bar"><span id="soilMsg">씨앗을 심어보세요 🌱</span></div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="section-label">전체 농장 현황</div>
+                <div class="farm-grid" id="farmGrid"></div>
+                <div id="farmEmpty" class="empty-state premium-glass">
+                    <div class="big">🌱</div>
+                    <p>작물이 아직 없어요.<br>'할 일' 탭에서 카테고리를 추가하세요!</p>
+                </div>
+            </div>
+            <div class="pb-100"></div>
+        </div>
+
+        <!-- 2. TASKS & TIMER: MANAGEMENT -->
+        <div id="tasks" class="page">
+            <div class="page-header">
+                <p class="subtitle">작물을 성장시킬 태스크를 선택하고 시간을 측정하세요.</p>
+            </div>
+
+            <!-- Categories & Tasks -->
+            <div class="cat-manager premium-glass">
+                <div class="cat-header">
+                    <h3>📂 카테고리 & 태스크</h3>
+                    <button class="add-btn btn-glow" onclick="showAddCat()" title="카테고리 추가">+</button>
+                </div>
+                <div id="addCatArea" class="add-panel" style="display:none">
+                    <div class="inline-input">
+                        <input id="newCatInput" placeholder="카테고리명 입력">
+                        <button class="btn btn-primary btn-sm" onclick="addCategory()">추가</button>
+                    </div>
+                    <div class="crop-picker" id="cropPicker"></div>
+                </div>
+                <div class="cat-list" id="catList"></div>
+
+                <div class="task-area" id="taskArea" style="display:none">
+                    <div class="task-area-header">
+                        <span id="taskAreaTitle">태스크</span>
+                        <button class="add-btn btn-glow" onclick="showAddTask()" title="태스크 추가">+</button>
+                    </div>
+                    <div id="addTaskArea" class="add-panel" style="display:none">
+                        <div class="inline-input">
+                            <input id="newTaskInput" placeholder="새 태스크명">
+                            <button class="btn btn-primary btn-sm" onclick="addTask()">추가</button>
+                        </div>
+                        <div class="goal-input-group">
+                            <span>목표:</span>
+                            <input type="number" id="newTaskGoalH" value="1" min="0" max="99"> <span>시간</span>
+                            <input type="number" id="newTaskGoalM" value="0" min="0" max="55" step="5"> <span>분</span>
+                        </div>
+                    </div>
+                    <div id="taskList" class="task-list"></div>
+                </div>
+            </div>
+
+            <!-- Timer Section -->
+            <div class="timer-section premium-glass">
+                <div class="mode-toggle">
+                    <button class="mode-btn active" onclick="setMode('stopwatch')">스톱워치</button>
+                    <button class="mode-btn" onclick="setMode('timer')">타이머</button>
+                </div>
+
+                <div id="timerSetArea" style="display:none">
+                    <div class="timer-set">
+                        <input type="number" id="setHour" value="0" min="0" max="23"><span>h</span>
+                        <input type="number" id="setMin" value="25" min="0" max="59"><span>m</span>
+                        <input type="number" id="setSec" value="0" min="0" max="59"><span>s</span>
+                    </div>
+                </div>
+
+                <div class="selected-info" id="selectedInfo" style="display:none">
+                    <span class="pulse-dot"></span> <span id="selectedLabel">선택된 태스크</span>
+                </div>
+
+                <div class="timer-display" id="timerDisplay">00:00</div>
+                <div class="timer-status" id="timerStatus">대기 중</div>
+
+                <div class="timer-btns">
+                    <button class="btn btn-primary btn-lg glow-anim" id="startBtn" onclick="startTimer()">시작하기</button>
+                    <button class="btn border-btn btn-lg" id="pauseBtn" onclick="pauseTimer()"
+                        style="display:none">일시정지</button>
+                    <button class="btn btn-danger btn-lg" id="stopBtn" onclick="stopTimer()"
+                        style="display:none">종료</button>
+                </div>
+            </div>
+            <div class="pb-100"></div>
+        </div>
+
+        <!-- 3. LOG -->
+        <div id="log" class="page">
+            <div class="page-header flex-between">
+                <h2>나의 기록</h2>
+                <span class="m-badge" id="logCount">0개</span>
+            </div>
+            <div id="logList">
+                <div class="empty-state premium-glass">
+                    <div class="big">📂</div>
+                    <p>아직 기록이 없어요.</p>
+                </div>
+            </div>
+            <div class="pb-100"></div>
+        </div>
+
+        <!-- 4. GROWTH -->
+        <div id="growth" class="page">
+            <div class="page-header">
+                <h2>나의 성장 인사이트</h2>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card premium-glass">
+                    <div class="stat-icon">⏱</div>
+                    <div class="stat-val gradient-text" id="totalHours">0h</div>
+                    <div class="stat-label">총 집중</div>
+                </div>
+                <div class="stat-card premium-glass">
+                    <div class="stat-icon">🔥</div>
+                    <div class="stat-val gradient-text" id="streak">0</div>
+                    <div class="stat-label">연속 달성일</div>
+                </div>
+                <div class="stat-card premium-glass">
+                    <div class="stat-icon">🎯</div>
+                    <div class="stat-val gradient-text" id="doneRate">—</div>
+                    <div class="stat-label">완료율</div>
+                </div>
+                <div class="stat-card premium-glass">
+                    <div class="stat-icon">✨</div>
+                    <div class="stat-val gradient-text" id="totalSessions">0</div>
+                    <div class="stat-label">세션 수</div>
+                </div>
+            </div>
+            <div class="chart-card premium-glass">
+                <div class="chart-title">주간 집중 추이 (분)</div>
+                <div class="week-bars" id="weekBars"></div>
+            </div>
+            <div class="chart-card premium-glass" id="failChartCard">
+                <div class="chart-title">주요 실패 원인 분석</div>
+                <div id="failTagChart">
+                    <p class="muted-text">분석할 데이터가 부족합니다.</p>
+                </div>
+            </div>
+            <div id="insightArea"></div>
+
+            <button class="btn btn-primary btn-block" onclick="openAIReport()"
+                style="margin-top:24px; font-weight:700; background:var(--accent); box-shadow:0 4px 16px var(--accent-glow); display:flex; align-items:center; justify-content:center; gap:8px;">
+                <span style="font-size:20px;">✨</span> AI 시즌 수확 보고서 발급받기
+            </button>
+
+            <div class="pb-100"></div>
+        </div>
+
+        <!-- MODAL -->
+        <div class="modal-overlay" id="endModal">
+            <div class="modal premium-glass">
+                <div class="modal-header">
+                    <div class="modal-title">세션 종료</div>
+                    <div class="modal-sub" id="sessionSummary">00:00</div>
+                </div>
+
+                <div class="choice-grid">
+                    <button class="choice-btn choice-done" onclick="selectResult('done')"><span
+                            class="icon">🌟</span>성공</button>
+                    <button class="choice-btn choice-partial" onclick="selectResult('partial')"><span
+                            class="icon">🌤️</span>부분 달성</button>
+                    <button class="choice-btn choice-fail" onclick="selectResult('fail')"><span
+                            class="icon">🌧️</span>중단 (거름)</button>
+                </div>
+
+                <div class="tag-section" id="tagSection" style="display:none">
+                    <div class="section-title">무엇이 방해가 되었나요?</div>
+                    <div class="tags">
+                        <span class="tag" onclick="toggleTag(this)">피로감</span>
+                        <span class="tag" onclick="toggleTag(this)">스마트폰</span>
+                        <span class="tag" onclick="toggleTag(this)">외부소음</span>
+                        <span class="tag" onclick="toggleTag(this)">계획오류</span>
+                        <span class="tag" onclick="toggleTag(this)">의욕저하</span>
+                    </div>
+                </div>
+
+                <div id="memoSection" style="display:none">
+                    <div class="input-stacked">
+                        <label>원인 분석</label>
+                        <textarea id="failReason" rows="2" placeholder="왜 중단하게 되었는지 기록해보세요."></textarea>
+                    </div>
+                    <div class="input-stacked">
+                        <label>개선 액션</label>
+                        <textarea id="improvePlan" rows="2" placeholder="다음번엔 어떻게 다르게 할까요?"></textarea>
+                    </div>
+                </div>
+
+                <div class="input-stacked">
+                    <label>메모</label>
+                    <textarea id="noteInput" rows="2" placeholder="작업 내용이나 기억할 점..."></textarea>
+                </div>
+
+                <button class="btn btn-primary btn-block" onclick="saveSession()">기록 저장하기</button>
+            </div>
+        </div>
+
+        <!-- AI REPORT MODAL -->
+        <div class="modal-overlay" id="aiReportModal"
+            style="display:none; align-items:center; justify-content:center; z-index:1100;">
+            <div class="modal premium-glass"
+                style="max-height: 85vh; overflow-y: auto; width: 90%; max-width: 400px; padding: 24px;">
+                <div class="modal-header">
+                    <div class="modal-title" style="display:flex; align-items:center; justify-content:center; gap:8px;">
+                        <span>✨</span> AI 시즌 수확 보고서
+                    </div>
+                </div>
+
+                <div id="aiReportContent" style="padding: 4px 0;">
+                    <!-- Report content injected by JS -->
+                </div>
+
+                <div style="display:flex; gap:12px; margin-top:16px;">
+                    <button class="btn border-btn btn-block" onclick="closeAIReport()">닫기</button>
+                    <button class="btn btn-primary btn-block" onclick="shareAIReport()">📸 캡처하기</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- BOTTOM NAV (Mobile) -->
+        <div class="bottom-nav premium-glass">
+            <button class="bnav-btn active" id="bnav-home" onclick="goPage('home')"><span class="bicon">�</span><span
+                    class="blabel">농장</span></button>
+            <button class="bnav-btn" id="bnav-tasks" onclick="goPage('tasks')"><span class="bicon">🎯</span><span
+                    class="blabel">관리</span></button>
+            <button class="bnav-btn" id="bnav-log" onclick="goPage('log')"><span class="bicon">📖</span><span
+                    class="blabel">기록</span></button>
+            <button class="bnav-btn" id="bnav-growth" onclick="goPage('growth')"><span class="bicon">📈</span><span
+                    class="blabel">성장</span></button>
+        </div>
+
+        <div class="toast premium-glass" id="toast"></div>
+
+    </div><!-- /appWrap -->
+
+    <script src="app.js"></script>
+</body>
+
+</html>
